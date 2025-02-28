@@ -1,0 +1,59 @@
+{{- if .Values.rbac.enabled }}
+# Role pour accéder aux services dans le namespace backend-ns
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "myproject.fullname" . }}-service-reader
+  namespace: backend-ns
+rules:
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list", "watch"]
+
+---
+
+# RoleBinding pour lier le rôle au ServiceAccount par défaut dans frontend-ns
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "myproject.fullname" . }}-service-reader-binding
+  namespace: backend-ns
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: frontend-ns
+roleRef:
+  kind: Role
+  name: {{ include "myproject.fullname" . }}-service-reader
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+# Role pour accéder et modifier les ConfigMaps dans frontend-ns
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "myproject.fullname" . }}-configmap-manager
+  namespace: frontend-ns
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+
+---
+
+# RoleBinding pour lier le rôle au ServiceAccount par défaut dans frontend-ns
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "myproject.fullname" . }}-configmap-manager-binding
+  namespace: frontend-ns
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: frontend-ns
+roleRef:
+  kind: Role
+  name: {{ include "myproject.fullname" . }}-configmap-manager
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
