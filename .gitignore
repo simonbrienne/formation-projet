@@ -1,0 +1,6 @@
+filrouge-main-sa.json
+filrouge-dev-sa.json
+filrouge-prod-sa.json
+
+terraform/.terraform
+terraform/.terraform.lock.hcl
