@@ -43,8 +43,11 @@ runs:
     - name: Get tgz file
       if: ${{ inputs.type == 'helm' }}
       id: get_tgz
-      run: echo "myproject-$(helm show chart myproject/Chart.yaml | yq e '.version' -).tgz" >> $GITHUB_OUTPUT
+      run: |
+        TGZ_FILE=$(find . -name "*.tgz" -type f | head -n 1 | xargs basename)
+        echo "tgz_file=${TGZ_FILE}" >> $GITHUB_OUTPUT
       shell: bash
+      working-directory: myproject
 
 
 
@@ -52,6 +55,6 @@ runs:
       if: ${{ inputs.type == 'helm' }}
       run: |
         helm registry login -u oauth2accesstoken -p "$(gcloud auth print-access-token)" europe-west1-docker.pkg.dev
-        helm push ${{ steps.get_tgz.outputs.get_tgz }} oci://${{ env.registryUri }}
+        helm push ${{ steps.get_tgz.outputs.tgz_file }} oci://${{ env.registryUri }}
       shell: bash
       working-directory: myproject
