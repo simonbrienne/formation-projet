@@ -105,6 +105,16 @@ resource "helm_release" "chart" {
   chart      = local.chart
   version    = local.chart_version
 
+  set {
+    name  = "backend.image.tag"
+    value = terraform.workspace == "dev" ? "develop" : "latest"
+  }
+
+  set {
+    name  = "frontend.image.tag"
+    value = terraform.workspace == "dev" ? "develop" : "latest"
+  }
+
   wait    = true
   timeout = 1000
 }
