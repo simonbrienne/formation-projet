@@ -69,7 +69,7 @@ jobs:
         id: vars
         shell: bash
         run: |
-          echo "image_version=$(if [ "${{ github.ref_name }}" = "main" ]; then echo "latest"; else echo "develop"; fi)" >> $GITHUB_OUTPUT
+          echo "image_version=$(if [ "${{ github.event.inputs.environment }}" = "prod" ]; then echo "latest"; else echo "develop"; fi)" >> $GITHUB_OUTPUT
 
           sed -i "s/tag: \"latest\"/tag: \"$image_version\"/" values.yaml
     
