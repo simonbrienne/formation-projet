@@ -47,7 +47,7 @@ jobs:
         id: get_image_url
         run: |
           registryUri=$(gcloud artifacts repositories describe mygcr --location=europe-west1 --format='value(registryUri)')
-          echo "registryUri=$registryUri" >> $GITHUB_ENV
+          echo "registryUri=$registryUri" >> $GITHUB_OUTPUT
         shell: bash
 
 
