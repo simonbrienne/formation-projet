@@ -1,6 +1,6 @@
 # KUBERNETES
 
-## ⚠️ Créer une branche feat-terraform sur votre répertoire GitHub
+## ⚠️ Créer une branche feat-kubernetes sur votre répertoire GitHub
 
 ### Consignes de l'exercice : 
 
