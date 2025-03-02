@@ -1,0 +1,34 @@
+backend:
+  replicaCount: 2
+  image:
+    repository: europe-west1-docker.pkg.dev/filrouge-452215/mygcr/backend
+    tag: "latest"
+    pullPolicy: Always
+  service:
+    port: 5000
+  ingress:
+    enabled: false
+    host: backend.local
+  hpa:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 50
+
+frontend:
+  replicaCount: 1
+  image:
+    repository: europe-west1-docker.pkg.dev/filrouge-452215/mygcr/frontend
+    tag: "latest"
+    pullPolicy: Always
+  service:
+    port: 80
+  ingress:
+    enabled: false
+    host: frontend.local
+
+networkPolicy:
+  enabled: false
+
+rbac:
+  enabled: true

@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "myproject.fullname" . }}-frontend
+  namespace: frontend-ns
+spec:
+  replicas: {{ .Values.frontend.replicaCount }}
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      initContainers:
+        - name: wait-for-backend-ip
+          image: bitnami/kubectl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for external IP of backend service..."
+              while true; do
+                  EXTERNAL_IP=$(kubectl get svc {{ include "myproject.fullname" . }}-backend-service -n backend-ns -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+                  if [ -n "$EXTERNAL_IP" ]; then
+                      echo "External IP found: $EXTERNAL_IP"
+                      kubectl create configmap backend-config \
+                          --namespace frontend-ns \
+                          --from-literal=BACKEND_URL=http://$EXTERNAL_IP:5000 \
+                          --dry-run=client -o yaml | kubectl apply -f -
+                      break
+                  fi
+                  echo "IP not available yet, retrying in 5 seconds..."
+                  sleep 5
+              done
+      containers:
+        - name: frontend
+          image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
+          imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.frontend.service.port }}
+          env:
+            - name: BACKEND_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: backend-config
+                  key: BACKEND_URL

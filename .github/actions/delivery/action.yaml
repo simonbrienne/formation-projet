@@ -1,0 +1,60 @@
+name: 'Integration action'
+description: 'Integration action'
+inputs:
+  dockerfile-path:
+    description: 'Path to the Dockerfile'
+  image-name:
+    description: 'Name of the image'
+    default: ${{ github.repository }}
+  type:
+    description: 'helm or docker'
+    required: true
+    default: 'docker'
+
+
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Build
+      id: build
+      if: ${{ inputs.type == 'docker' }}
+      run: docker build -t ${{ env.registryUri }}/${{ inputs.image-name }}:${{ env.image_version }} -f ${{ inputs.dockerfile-path }} . --platform linux/amd64
+      shell: bash
+
+
+
+    - name: push Docker image
+      if: ${{ steps.build.outcome == 'success' && inputs.type == 'docker' }}
+      run: docker push ${{ env.registryUri }}/${{ inputs.image-name }}:${{ env.image_version }}
+      shell: bash
+
+
+
+    - name: Package Helm Chart
+      if: ${{ inputs.type == 'helm' }}
+      run: helm package .
+      shell: bash
+      working-directory: myproject
+
+
+
+    - name: Get tgz file
+      if: ${{ inputs.type == 'helm' }}
+      id: get_tgz
+      run: |
+        TGZ_FILE=$(find . -name "*.tgz" -type f | head -n 1 | xargs basename)
+        echo "tgz_file=${TGZ_FILE}" >> $GITHUB_OUTPUT
+      shell: bash
+      working-directory: myproject
+
+
+
+    - name: Push Helm Chart
+      if: ${{ inputs.type == 'helm' }}
+      run: |
+        helm registry login -u oauth2accesstoken -p "$(gcloud auth print-access-token)" europe-west1-docker.pkg.dev
+        helm push ${{ steps.get_tgz.outputs.tgz_file }} oci://${{ env.registryUri }}
+      shell: bash
+      working-directory: myproject

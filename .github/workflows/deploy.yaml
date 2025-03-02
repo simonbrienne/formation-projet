@@ -1,0 +1,245 @@
+name: Deploy Workflow
+
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment'
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+
+
+
+jobs:
+  terraform-plan:
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    
+    runs-on: self-hosted
+    
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+
+
+
+      - name: 🔀 Checkout repository
+        uses: actions/checkout@v4
+
+
+
+      - id: auth
+        uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: 'projects/161911340849/locations/global/workloadIdentityPools/filrouge-formation/providers/my-oidc-github-provider'
+          service_account: 'filrouge-main-sa@filrouge-452215.iam.gserviceaccount.com'
+
+
+
+      - id: secrets
+        uses: google-github-actions/get-secretmanager-secrets@v2
+        with:
+          secrets: |-
+            service-account:filrouge-452215/sa-${{ github.event.inputs.environment }}
+
+
+
+      - name: Setup credentials files for Terraform ${{ github.event.inputs.environment }}
+        id: credentials
+        run: |
+          echo "${{ steps.secrets.outputs.service-account }}" | base64 --decode > ./filrouge-${{ github.event.inputs.environment }}-sa.json
+          ls -la
+
+
+
+      - name: Upload myproject-tf-${{ github.event.inputs.environment }}.json
+        uses: actions/upload-artifact@v4
+        with:
+          name: filrouge-${{ github.event.inputs.environment }}-sa
+          path: filrouge-${{ github.event.inputs.environment }}-sa.json
+
+
+
+      - name: Set the value of the image version for values.yaml
+        id: vars
+        shell: bash
+        run: |
+          echo "image_version=$(if [ "${{ github.ref_name }}" = "main" ]; then echo "latest"; else echo "develop"; fi)" >> $GITHUB_OUTPUT
+
+          sed -i "s/tag: \"latest\"/tag: \"$image_version\"/" values.yaml
+    
+          echo "Updated values.yaml:"
+          cat values.yaml
+        working-directory: myproject
+
+
+
+      - name: Use terraform
+        uses: hashicorp/setup-terraform@v3
+
+
+
+      - name: Terraform fmt
+        id: fmt
+        run: terraform fmt -check
+        continue-on-error: true
+        working-directory: terraform
+
+
+
+      - name: Terraform Init
+        id: init
+        run: terraform init -input=false
+        working-directory: terraform
+
+
+
+      - name: Terraform workspace ${{ github.event.inputs.environment }}
+        id: workspace
+        run: terraform workspace select ${{ github.event.inputs.environment }}
+        working-directory: terraform
+
+
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -no-color -out=tfplan
+        continue-on-error: true
+        working-directory: terraform
+
+
+
+  manual-approval:
+    name: Manual Approval
+    
+    runs-on: self-hosted
+    
+    needs: terraform-plan
+    
+    if: success()  # seulement si le job terraform-plan est un succès
+    
+    permissions:
+      issues: write
+  
+    steps:
+
+
+
+      - name: Créer l'issue d'approbation manuelle
+        id: create_issue
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: issue } = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: "Manual Approval Required for Terraform Apply",
+              body: "Please approve or deny the deployment."
+            });
+            console.log(`Issue créée : ${issue.number}`);
+            return issue.number;
+
+
+
+      - name: Attendre l'approbation de ${{ github.actor }}
+        id: wait_for_approval
+        run: |
+          ISSUE_NUMBER=${{ steps.create_issue.outputs.result }}
+          echo "Issue #$ISSUE_NUMBER créée. En attente de l'approbation de ${{ github.actor }}..."
+          count=0
+          while true; do
+            response=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${{ github.repository }}/issues/$ISSUE_NUMBER/comments")
+            approved=$(echo "$response" | jq '[.[] | select(.user.login=="${{ github.actor }}") | select(.body | test("ok"; "i"))]')
+            if [ "$(echo "$approved" | jq 'length')" -gt 0 ]; then
+              echo "Approbation reçue de ${{ github.actor }}."
+              break
+            fi
+            count=$((count+1))
+            if [ $count -ge 60 ]; then
+              echo "Délai d'attente dépassé pour l'approbation."
+              exit 1
+            fi
+            sleep 30
+          done
+
+
+
+  terraform-apply:
+    name: Terraform Apply
+    
+    runs-on: self-hosted
+    
+    needs: manual-approval
+    
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+
+
+
+      - name: 🔀 Checkout repository
+        uses: actions/checkout@v4
+
+
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/172767828573/locations/global/workloadIdentityPools/my-github-formation/providers/my-oidc-github-provide'
+          service_account: 'filrouge-main-sa@filrouge-452215.iam.gserviceaccount.com'
+
+
+
+      - name: Download filrouge-${{ github.event.inputs.environment }}-sa.json
+        uses: actions/download-artifact@v4
+        with:
+          name: filrouge-${{ github.event.inputs.environment }}-sa
+          path: ./
+
+
+
+      - name: Set the value of the image version for values.yaml
+        id: vars
+        shell: bash
+        run: |
+          echo "image_version=$(if [ "${{ github.ref_name }}" = "main" ]; then echo "latest"; else echo "develop"; fi)" >> $GITHUB_OUTPUT
+
+          sed -i "s/tag: \"latest\"/tag: \"$image_version\"/" values.yaml
+    
+          echo "Updated values.yaml:"
+          cat values.yaml
+        working-directory: myproject
+
+
+
+      - name: Use terraform
+        uses: hashicorp/setup-terraform@v3
+
+
+
+      - name: Terraform Init
+        id: init
+        run: terraform init -input=false
+        working-directory: terraform
+
+
+
+      - name: Terraform workspace ${{ github.event.inputs.environment }}
+        id: workspace
+        run: terraform workspace select ${{ github.event.inputs.environment }}
+        working-directory: terraform
+
+
+
+      - name: Terraform Apply
+        id: apply
+        run: terraform apply --auto-approve
+        working-directory: terraform
