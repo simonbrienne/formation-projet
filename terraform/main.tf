@@ -21,7 +21,7 @@ terraform {
   backend "gcs" {
     bucket      = "filrouge-main-gcs"
     prefix      = "terraform/state"
-    credentials = "./../filrouge-main-sa.json"
+   #  credentials = "./../filrouge-main-sa.json"
   }
 }
 
