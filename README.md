@@ -1,6 +1,6 @@
 # GHA CICD
 
-## ⚠️ Créer une branche feat-docker sur votre répertoire GitHub
+## ⚠️ Créer une branche feat-gha sur votre répertoire GitHub
 
 ### Consignes de l'exercice : 
 
