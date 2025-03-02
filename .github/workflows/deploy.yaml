@@ -65,20 +65,6 @@ jobs:
 
 
 
-      - name: Set the value of the image version for values.yaml
-        id: vars
-        shell: bash
-        run: |
-          echo "image_version=$(if [ "${{ github.event.inputs.environment }}" = "prod" ]; then echo "latest"; else echo "develop"; fi)" >> $GITHUB_OUTPUT
-
-          sed -i "s/tag: \"latest\"/tag: \"$image_version\"/" values.yaml
-    
-          echo "Updated values.yaml:"
-          cat values.yaml
-        working-directory: myproject
-
-
-
       - name: Use terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -203,20 +189,6 @@ jobs:
         with:
           name: filrouge-${{ github.event.inputs.environment }}-sa
           path: ./
-
-
-
-      - name: Set the value of the image version for values.yaml
-        id: vars
-        shell: bash
-        run: |
-          echo "image_version=$(if [ "${{ github.ref_name }}" = "main" ]; then echo "latest"; else echo "develop"; fi)" >> $GITHUB_OUTPUT
-
-          sed -i "s/tag: \"latest\"/tag: \"$image_version\"/" values.yaml
-    
-          echo "Updated values.yaml:"
-          cat values.yaml
-        working-directory: myproject
 
 
 
