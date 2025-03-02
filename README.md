@@ -1,33 +1,12 @@
-# Correction - Module 2 - Docker
+# DOCKER
 
-Retrouver le code source pour la correction du module Docker sur GitHub sur la branche “docker” : [https://github.com/simonbrienne/formation-projet/tree/docker](https://github.com/simonbrienne/formation-projet/tree/docker)
+## ⚠️ Créer une branche feat-docker sur votre répertoire GitHub
 
-**Build de l’image frontend :**
+### Consignes de l'exercice : 
 
-```bash
-docker build -t frontend -f frontend/Dockerfile . --no-cache
-```
+- https://drive.google.com/file/d/1hjIRun26IHusL2ec5Fau_mESSfHmUJNU/view?usp=drive_link
 
-**Build de l’image backend :**
+### Correction : 
 
-```bash
-docker build -t backend -f backend/Dockerfile . --no-cache
-```
-
-**Run de l’image backend sur le port 1234 :**
-
-```bash
-docker run -p 1234:5000 -d backend
-```
-
-**Run de l’image frontend sur le port 9999 :** 
-
-```bash
-docker run -p 9999:80 -e BACKEND_URL="http://127.0.0.1:1234" -d frontend
-```
-
-**Rendez-vous sur chrome :** 
-
-Test du backend : [http://127.0.0.1:1234/health](http://127.0.0.1:1234/health)
-
-Test du frontend : [http://127.0.0.1:9999](http://127.0.0.1:9999)
+- https://drive.google.com/file/d/1uvgbPjMJ1MgpP3upDlJrU6_zkoDp_UeB/view?usp=drive_link
+- Code Source : https://github.com/simonbrienne/formation-projet/tree/docker
