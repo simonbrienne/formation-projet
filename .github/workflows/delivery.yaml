@@ -33,7 +33,7 @@ jobs:
       - id: auth
         uses: 'google-github-actions/auth@v2'
         with:
-          workload_identity_provider: 'projects/161911340849/locations/global/workloadIdentityPools/filrouge-formation/providers/my-oidc-github-provider'
+          workload_identity_provider: 'projects/161911340849/locations/global/workloadIdentityPools/filrouge-formation/providers/oidc-github-provider'
           service_account: 'filrouge-main-sa@filrouge-452215.iam.gserviceaccount.com'
 
 
