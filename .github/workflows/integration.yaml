@@ -1,0 +1,125 @@
+name: CI Workflow
+
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - .github/workflows/delivery.yml
+      - .github/workflows/deploy.yml
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+  workflow_dispatch:
+
+
+
+jobs:
+  mon-job:
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    runs-on: self-hosted
+
+
+    steps:
+
+
+      - name: 🔀 Checkout repository
+        uses: actions/checkout@v4
+
+
+
+      - id: auth
+        uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: 'projects/161911340849/locations/global/workloadIdentityPools/filrouge-formation/providers/my-oidc-github-provider'
+          service_account: 'filrouge-main-sa@filrouge-452215.iam.gserviceaccount.com'
+
+
+
+      - id: 'secrets'
+        uses: 'google-github-actions/get-secretmanager-secrets@v2'
+        with:
+          secrets: |-
+            service-account:filrouge/sa-prod
+
+
+      
+      - name: Setup credentials files for Terraform prod
+        id: credentials
+        run: |
+          echo "${{ steps.secrets.outputs.service-account }}" | base64 --decode > ./filrouge-prod-sa.json
+          
+          ls -la
+
+
+
+      - name: Configure Docker
+        run: gcloud auth configure-docker europe-west1-docker.pkg.dev
+        shell: bash
+
+
+
+      - name: Build
+        id: build
+        run: |
+          docker build -t docker-ci/test-integration-frontend:${{ github.run_id }} -f frontend/Dockerfile . --platform linux/amd64
+          docker build -t docker-ci/test-integration-backend:${{ github.run_id }} -f backend/Dockerfile . --platform linux/amd64
+        shell: bash
+
+
+
+      - name: Verify Helm Charts
+        run: |
+          helm lint .
+          helm show all . 
+          helm template .
+        shell: bash
+        working-directory: myproject
+
+
+      
+      - name: Use terraform
+        uses: hashicorp/setup-terraform@v3
+
+
+
+      - name: Terraform fmt
+        id: fmt
+        run: terraform fmt -check
+        continue-on-error: true
+        working-directory: terraform
+
+
+
+      - name: Terraform Init
+        id: init
+        run: terraform init -input=false
+        working-directory: terraform
+
+
+
+      - name: Terraform workspace prod
+        id: workspace
+        run: terraform workspace select prod
+        working-directory: terraform
+
+
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          terraform plan -no-color -out=tfplan
+        continue-on-error: true
+        working-directory: terraform
+

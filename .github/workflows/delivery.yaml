@@ -1,0 +1,98 @@
+name: Delivery Workflow
+
+
+on:
+  push:
+    branches:
+      - main
+      - gha
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - .github/workflows/delivery.yml
+      - .github/workflows/deploy.yml
+  workflow_dispatch:
+
+
+
+jobs:
+  delivery:
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    runs-on: self-hosted
+
+
+    steps:
+      - name: 🔀 Checkout repository
+        uses: actions/checkout@v4
+
+
+
+      - id: auth
+        uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: 'projects/161911340849/locations/global/workloadIdentityPools/filrouge-formation/providers/my-oidc-github-provider'
+          service_account: 'filrouge-main-sa@filrouge-452215.iam.gserviceaccount.com'
+
+
+
+      - name: Set up Cloud SDK
+        uses: 'google-github-actions/setup-gcloud@v2'
+
+
+
+      - name: Get Image url 
+        id: get_image_url
+        run: |
+          registryUri=$(gcloud artifacts repositories describe mygcr --location=europe-west1 --format='value(registryUri)')
+          echo "registryUri=$registryUri" >> $GITHUB_ENV
+        shell: bash
+
+
+
+      - name: Configure Docker
+        run: gcloud auth configure-docker europe-west1-docker.pkg.dev
+        shell: bash
+
+
+
+      - name: Set the value of the image version
+        id: vars
+        shell: bash
+        run: echo "image_version=$(if [ "${{ github.ref_name }}" = "main" ]; then echo "latest"; else echo "develop"; fi)" >> $GITHUB_OUTPUT
+
+
+      
+      - name: 🚚 Delivery Workflow Frontend
+        uses: ./.github/actions/delivery
+        with:
+          dockerfile-path: 'frontend/Dockerfile'
+          image-name: 'frontend'
+          type: 'docker'
+        env:
+          registryUri: ${{ steps.get_image_url.outputs.registryUri }}
+          image_version: ${{ steps.vars.outputs.image_version }}
+
+
+
+      - name: 🚚 Delivery Workflow Backend
+        uses: ./.github/actions/delivery
+        with:
+          dockerfile-path: 'backend/Dockerfile'
+          image-name: 'backend'
+          type: 'docker'
+        env:
+          registryUri: ${{ steps.get_image_url.outputs.registryUri }}
+          image_version: ${{ steps.vars.outputs.image_version }}
+
+
+
+      # push Helm 
+      - name: 🚚 Delivery Workflow Helm Chart
+        uses: ./.github/actions/delivery
+        with:
+          type: 'helm'
+        env:
+          registryUri: ${{ steps.get_image_url.outputs.registryUri }}
