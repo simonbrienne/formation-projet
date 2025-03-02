@@ -72,9 +72,6 @@ module "gke" {
   service_account            = local.service_account
 
   deletion_protection        = false
-
-  # En ne spécifiant pas de bloc "node_pools", le module créera automatiquement un pool par défaut.
-  remove_default_node_pool = false
 }
 
 # Module configuration for Helm
