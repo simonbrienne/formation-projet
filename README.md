@@ -1,4 +1,4 @@
-# Module 2
+# GHA CICD
 
 ## ⚠️ Créer une branche feat-docker sur votre répertoire GitHub
 
