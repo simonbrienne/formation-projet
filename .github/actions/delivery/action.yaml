@@ -19,21 +19,21 @@ runs:
 
     - name: Build
       id: build
-      if: ${{ inputs.type }} == 'docker'
+      if: ${{ inputs.type == 'docker' }}
       run: docker build -t ${{ env.registryUri }}/${{ inputs.image-name }}:${{ env.image_version }} -f ${{ inputs.dockerfile-path }} . --platform linux/amd64
       shell: bash
 
 
 
     - name: push Docker image
-      if: steps.build.outcome == 'success' && ${{ inputs.type }} == 'docker'
+      if: ${{ steps.build.outcome == 'success' && inputs.type == 'docker' }}
       run: docker push ${{ env.registryUri }}/${{ inputs.image-name }}:${{ env.image_version }}
       shell: bash
 
 
 
     - name: Package Helm Chart
-      if: ${{ inputs.type }} == 'helm'
+      if: ${{ inputs.type == 'helm' }}
       run: helm package .
       shell: bash
       working-directory: myproject
@@ -41,7 +41,7 @@ runs:
 
 
     - name: Get tgz file
-      if: ${{ inputs.type }} == 'helm'
+      if: ${{ inputs.type == 'helm' }}
       id: get_tgz
       run: echo "myproject-$(helm show chart myproject/Chart.yaml | yq e '.version' -).tgz" >> $GITHUB_OUTPUT
       shell: bash
@@ -49,7 +49,7 @@ runs:
 
 
     - name: Push Helm Chart
-      if: ${{ inputs.type }} == 'helm'
+      if: ${{ inputs.type == 'helm' }}
       run: |
         helm registry login -u oauth2accesstoken -p "$(gcloud auth print-access-token)" europe-west1-docker.pkg.dev
         helm push ${{ steps.get_tgz.outputs.get_tgz }} oci://${{ env.registryUri }}
