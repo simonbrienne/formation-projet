@@ -45,7 +45,7 @@ jobs:
         uses: google-github-actions/get-secretmanager-secrets@v2
         with:
           secrets: |-
-            service-account:filrouge/sa-${{ github.event.inputs.environment }}
+            service-account:filrouge-452215/sa-${{ github.event.inputs.environment }}
 
 
 

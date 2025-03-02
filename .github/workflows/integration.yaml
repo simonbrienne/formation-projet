@@ -51,7 +51,7 @@ jobs:
         uses: 'google-github-actions/get-secretmanager-secrets@v2'
         with:
           secrets: |-
-            service-account:filrouge/sa-prod
+            service-account:filrouge-452215/sa-prod
 
 
       
